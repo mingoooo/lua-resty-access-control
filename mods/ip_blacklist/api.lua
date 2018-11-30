@@ -1,4 +1,5 @@
 local cfg = require "access_filter.mods.ip_blacklist.config"
+local gcfg = require "access_filter.config"
 local cjson = require "cjson"
 local redis = require "resty.redis"
 
@@ -15,8 +16,8 @@ end
 
 -- 创建redis连接
 local red = redis:new()
-red:set_timeout(cfg.redis_connect_timeout)
-local ok, err = red:connect(cfg.redis_host, cfg.redis_port)
+red:set_timeout(gcfg.redis_connect_timeout)
+local ok, err = red:connect(gcfg.redis_host, gcfg.redis_port)
 if not ok then
     local reason = "Redis connection error while retrieving ip_blacklist: " .. err
     say_err(ngx.HTTP_INTERNAL_SERVER_ERROR, reason)

@@ -18,7 +18,6 @@ function _M.connect_redis(self, host, port, timeout)
     if timeout then
         red:set_timeout(timeout)
     end
-    -- 连接redis
     local ok, err = red:connect(host, port)
     if ok then
         self.redis = red
@@ -37,6 +36,13 @@ function _M.fetch_data(self, redis_key_prefix, cache_file)
     local data = {}
     local keys = {}
     local vals = {}
+
+    -- 连接redis
+    local ok, err = self:connect_redis(cfg.redis_host, cfg.redis_port, cfg.redis_connect_timeout)
+    if not ok then
+        -- 加载缓存文件
+        return self.load_file(cache_file)
+    end
 
     -- 获取新黑名单到nginx缓存
     cursor = 0
@@ -71,6 +77,11 @@ function _M.fetch_data(self, redis_key_prefix, cache_file)
         data[key] = vals[i]
     end
 
+    -- 备份到缓存文件
+    self.dump_file(cache_file, data)
+
+    -- keepalive
+    self:keepalive_redis()
     return data
 end
 

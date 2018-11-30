@@ -40,24 +40,12 @@ function _M.sync(self)
     ngx.log(ngx.DEBUG, "Begin of update blacklist")
     local new_ip_blacklist
 
-    -- 连接redis
-    local ok, err = self:connect_redis(cfg.redis_host, cfg.redis_port, cfg.redis_connect_timeout)
-    if not ok then
-        -- 加载缓存文件
-        new_ip_blacklist = self.load_file(cfg.cache_file)
-    else
-        -- 从redis拉取数据
-        new_ip_blacklist = self:fetch_data(cfg.redis_key_prefix, cfg.cache_file)
-    end
+    -- 从redis或缓存文件读取数据
+    new_ip_blacklist = self:fetch_data(cfg.redis_key_prefix, cfg.cache_file)
 
     -- 同步共享内存字典
     self.sync_shared_dict(cfg.dict_name, new_ip_blacklist)
 
-    -- 备份到缓存文件
-    self.dump_file(cfg.cache_file, new_ip_blacklist)
-
-    -- keepalive
-    self:keepalive_redis()
     ngx.log(ngx.DEBUG, "End of update blacklist")
 end
 
