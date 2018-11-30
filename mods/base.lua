@@ -1,6 +1,6 @@
 local redis = require "resty.redis"
 local cjson = require "cjson"
-local cfg = require "access_filter.config"
+local cfg = require "access_control.config"
 
 local _M = {}
 
@@ -47,7 +47,7 @@ function _M.fetch_data(self, redis_key_prefix, cache_file)
     -- 获取新黑名单到nginx缓存
     cursor = 0
     while true do
-        local res, err = self.redis:scan(cursor, "MATCH", "access_filter:" .. redis_key_prefix .. ":*", "COUNT", 1000)
+        local res, err = self.redis:scan(cursor, "MATCH", "access_control:" .. redis_key_prefix .. ":*", "COUNT", 1000)
         if err then
             ngx.log(ngx.ERR, "Redis read error while retrieving keys: " .. err)
             return self.load_file(cache_file)

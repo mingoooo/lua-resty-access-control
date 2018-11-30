@@ -1,5 +1,5 @@
-local cfg = require "access_filter.mods.ip_blacklist.config"
-local gcfg = require "access_filter.config"
+local cfg = require "access_control.mods.ip_blacklist.config"
+local gcfg = require "access_control.config"
 local cjson = require "cjson"
 local redis = require "resty.redis"
 
@@ -66,7 +66,7 @@ local function gen_key(ip, expireat, expire)
         expireat = 0
     end
 
-    key = "access_filter:" .. cfg.redis_key_prefix .. ":" .. ip
+    key = "access_control:" .. cfg.redis_key_prefix .. ":" .. ip
     ngx.log(ngx.DEBUG, "Generate key: " .. key)
     if expireat == 0 then
         return key, expireat, nil
@@ -78,7 +78,7 @@ local function get()
     local data = {}
     -- 获取黑名单全部key
     local ip_blacklist_expireat
-    local ip_blacklist, err = red:keys("access_filter:" .. cfg.redis_key_prefix .. ":*")
+    local ip_blacklist, err = red:keys("access_control:" .. cfg.redis_key_prefix .. ":*")
     if err then
         local reason = "Redis read error: " .. err
         say_err(ngx.HTTP_INTERNAL_SERVER_ERROR, reason)
@@ -260,7 +260,7 @@ local function delete()
             end
 
             for ip in v:gmatch("[^,]+") do
-                local key = "access_filter:" .. cfg.redis_key_prefix .. ":" .. ip:gsub("%s+", "")
+                local key = "access_control:" .. cfg.redis_key_prefix .. ":" .. ip:gsub("%s+", "")
 
                 -- Delete key
                 local res, err = red:del(key)

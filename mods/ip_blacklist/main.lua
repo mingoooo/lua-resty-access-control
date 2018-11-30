@@ -1,5 +1,5 @@
-local base = require "access_filter.mods.base"
-local cfg = require "access_filter.mods.ip_blacklist.config"
+local base = require "access_control.mods.base"
+local cfg = require "access_control.mods.ip_blacklist.config"
 
 local _M = {}
 setmetatable(_M, {__index = base})

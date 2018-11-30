@@ -22,7 +22,7 @@ Example:
 Example:
 
 ```
-local base = require "access_filter.mods.base"
+local base = require "access_control.mods.base"
 
 local _M = {}
 setmetatable(_M, {__index = base})

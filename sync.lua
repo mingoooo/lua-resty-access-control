@@ -1,8 +1,8 @@
-local cfg = require "access_filter.config"
+local cfg = require "access_control.config"
 
 local function sync()
     for _, mod in ipairs(cfg.mods) do
-        local m = require("access_filter.mods." .. mod .. ".main")
+        local m = require("access_control.mods." .. mod .. ".main")
         m:sync()
     end
 end
