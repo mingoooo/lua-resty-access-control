@@ -94,7 +94,7 @@ local function get()
 
     for index, key in ipairs(ip_blacklist) do
         local ext = ip_blacklist_expireat[index]
-        local _, _, ip = string.match(key, "(.*)_(.*)_(.*)")
+        local _, _, ip = string.match(key, "(.*):(.*):(.*)")
         table.insert(data, {ip = ip, expireat = tonumber(ext), key = key})
     end
 
