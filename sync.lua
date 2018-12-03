@@ -1,4 +1,6 @@
 local cfg = require "access_control.config"
+local logger = require "access_control.utils.logger"
+logger.mod_name = "sync"
 
 local function sync()
     for _, mod in ipairs(cfg.mods) do
@@ -12,7 +14,7 @@ local function handler(premature)
         sync()
         local ok, err = ngx.timer.at(cfg.sync_interval, handler)
         if not ok then
-            ngx.log(ngx.ERR, "failed to create timer: ", err)
+            logger:err("failed to create timer: " .. err)
             return
         end
     end
@@ -24,16 +26,16 @@ local function sync_loop()
         ngx.timer.at(0, sync)
         local ok, err = ngx.timer.at(cfg.sync_interval, handler)
         if not ok then
-            ngx.log(ngx.ERR, "failed to create timer: ", err)
+            logger:err("failed to create timer: " .. err)
             return
         end
-        ngx.log(ngx.INFO, "Sync loop start")
+        logger:info("Sync loop start")
     end
 end
 
 xpcall(
     sync_loop,
     function(err)
-        ngx.log(ngx.ERR, err)
+        logger:err("sync_loop err: " .. err)
     end
 )

@@ -1,15 +1,17 @@
 local redis = require "resty.redis"
 local cjson = require "cjson"
 local cfg = require "access_control.config"
+local logger = require "access_control.utils.logger"
+logger.mod_name = "base_mod"
 
 local _M = {}
 
 function _M.on_sync(self)
-    ngx.log(ngx.WARN, "Undefined sync method")
+    logger:warn("Undefined on_sync method")
 end
 
 function _M.on_filter(self)
-    ngx.log(ngx.WARN, "Undefined filter method")
+    logger:warn("Undefined on_filter method")
 end
 
 -- 连接redis
@@ -32,7 +34,7 @@ end
 
 -- 从redis拉取数据，只要获取失败就从缓存文件加载
 function _M.fetch_data(self, mod_redis_key_prefix, cache_file)
-    ngx.log(ngx.DEBUG, "Fetch " .. mod_redis_key_prefix .. " data")
+    logger:debug("Fetch " .. mod_redis_key_prefix .. " data")
     local data = {}
     local keys = {}
     local vals = {}
@@ -44,14 +46,14 @@ function _M.fetch_data(self, mod_redis_key_prefix, cache_file)
         return self.load_file(cache_file)
     end
 
-    local redis_full_key_prefix = cfg.common_redis_key_prefix..":" .. mod_redis_key_prefix .. ":"
+    local redis_full_key_prefix = cfg.common_redis_key_prefix .. ":" .. mod_redis_key_prefix .. ":"
 
     -- 先获取mod所有key
     cursor = 0
     while true do
         local res, err = self.redis:scan(cursor, "MATCH", redis_full_key_prefix .. "*", "COUNT", 1000)
         if err then
-            ngx.log(ngx.ERR, "Redis read error while retrieving keys: " .. err)
+            logger:err("Redis read error while retrieving keys: " .. err)
             return self.load_file(cache_file)
         end
 
@@ -69,7 +71,7 @@ function _M.fetch_data(self, mod_redis_key_prefix, cache_file)
     if keys[1] ~= nil then
         vals, err = self.redis:mget(unpack(keys))
         if err then
-            ngx.log(ngx.ERR, "Redis read error while retrieving values: " .. err)
+            logger:err("Redis read error while retrieving values: " .. err)
             return self.load_file(cache_file)
         end
     end
@@ -90,10 +92,10 @@ end
 
 -- 从本地缓存文件中获取数据
 function _M.load_file(path)
-    ngx.log(ngx.DEBUG, "Load data by file: " .. path)
+    logger:debug("Load data by file: " .. path)
     local file = io.open(path, "r")
     if file == nil then
-        ngx.log(ngx.WARN, "Unable to read file "..path)
+        logger:warn("Unable to read file " .. path)
         return nil
     end
     local res = cjson.decode(file:read())
@@ -102,7 +104,7 @@ function _M.load_file(path)
 end
 
 function _M.dump_file(path, table)
-    ngx.log(ngx.DEBUG, "Dump data into file: " .. path)
+    logger.debug("Dump data into file: " .. path)
     local file = io.open(path, "w+")
     file:write(cjson.encode(table))
     file:close()

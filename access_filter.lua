@@ -1,4 +1,6 @@
 local cfg = require "access_control.config"
+local logger = require "access_control.utils.logger"
+logger.mod_name = "access_filter"
 
 local function filter()
     for _, mod in ipairs(cfg.mods) do
@@ -10,6 +12,6 @@ end
 xpcall(
     filter,
     function(err)
-        ngx.log(ngx.ERR, err)
+        logger:err(err)
     end
 )
