@@ -1,8 +1,8 @@
 local base = require "access_control.mods.base"
 local cfg = require "access_control.mods.ip_blacklist.config"
 local gcfg = require "access_control.config"
-local logger = require "access_control.utils.logger"
-logger.mod_name = "ip_blacklist"
+local logger_mod = require "access_control.utils.logger"
+local logger = logger_mod:new("ip_blacklist")
 
 local _M = {}
 setmetatable(_M, {__index = base})

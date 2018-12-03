@@ -1,9 +1,16 @@
 local _M = {}
+local mt = {__index = _M}
 
-_M.mod_name = ""
+function _M.new(self, mod_name)
+    return setmetatable({_mod_name = mod_name}, mt)
+end
 
 function _M.log(self, level, msg)
-    ngx.log(level, "[" .. self.mod_name .. "] ", msg)
+    local mod_name = rawget(self, "_mod_name")
+    if not mod_name then
+        return "not initialized"
+    end
+    ngx.log(level, "[" .. mod_name .. "] ", msg)
 end
 
 function _M.debug(self, msg)

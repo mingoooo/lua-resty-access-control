@@ -1,6 +1,6 @@
 local cfg = require "access_control.config"
-local logger = require "access_control.utils.logger"
-logger.mod_name = "access_filter"
+local logger_mod = require "access_control.utils.logger"
+local logger = logger_mod:new("access_filter")
 
 local function filter()
     for _, mod in ipairs(cfg.mods) do

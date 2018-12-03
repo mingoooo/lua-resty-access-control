@@ -1,8 +1,8 @@
 local redis = require "resty.redis"
 local cjson = require "cjson"
 local cfg = require "access_control.config"
-local logger = require "access_control.utils.logger"
-logger.mod_name = "base_mod"
+local logger_mod = require "access_control.utils.logger"
+local logger = logger_mod:new("base_mod")
 
 local _M = {}
 

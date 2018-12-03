@@ -1,6 +1,6 @@
 local cfg = require "access_control.config"
-local logger = require "access_control.utils.logger"
-logger.mod_name = "sync"
+local logger_mod = require "access_control.utils.logger"
+local logger = logger_mod:new("sync")
 
 local function sync()
     for _, mod in ipairs(cfg.mods) do
