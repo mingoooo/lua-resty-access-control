@@ -8,17 +8,35 @@
        author: frank chen
 --]]
 local limit_req = require "resty.limit.req"
+local limit_traffic = require "resty.limit.traffic"
 local base = require "access_control.mods.base"
 local common_cfg = require "access_control.config"
-local logger_mod = require "access_control.utils.logger"
-local logger = logger_mod:new("traffic_control")
+local logger = require "access_control.utils.logger"
+logger.mod_name = "traffic_control"
 
-local uri_limit_map = ngx.shared["uri_limit_map"]
+local limiter_list = {}
+local uri_list = {}
+local states = {}
+
 local redis_key_prefix = "traffic_limit"
 local cache_file_path = common_cfg.cache_file_basepath .. "traffic_limit_setting.json"
 
 local _M = {}
 setmetatable(_M, {__index = base})
+
+--[[
+       为uri创建limit_req
+--]]
+local function new_limit_req(uri, qps_limit, burst)
+    -- 限制uri的QPS为qps_limit并允许突发QPS为$burst，即如果qps_limit < QPS < qps_limit + burst，则delay处理，如果QPS > $qps_limit + $burst，则直接拒绝请求
+    local result, err = limit_req.new("qps_limit_store", qps_limit, burst)
+    if not result then
+        logger:err("failed to instantiate a resty.limit.req object: " .. err .. ", uri: " .. uri)
+        return nil
+    end
+    return result
+end
+
 
 --[[
        redis同步配置回调
@@ -35,54 +53,42 @@ function _M.on_sync(self)
         return
     end
 
-    uri_limit_map:flush_all()
+    limiter_list = {}
+    uri_list = {}
     for k, v in pairs(config_list) do
-        local limit = tonumber(v)
-        if limit == nil then
-            logger:warn("non-number value " .. v .. " for key " .. k)
+        local qps_limit = tonumber(v)
+        if qps_limit ~= nil then
+            local burst = qps_limit * 0.1
+            local limiter = new_limit_req(k, qps_limit, burst)
+            if limiter ~= nil then
+                table.insert(limiter_list, limiter)
+                table.insert(uri_list, k)
+            end
         else
-            uri_limit_map:set(k, limit)
+            logger:warn("NON-NUMBER VALUE " .. v .. " FOR KEY " .. k)
         end
     end
 
-    logger:info("End update traffic limiting config")
+    logger:info("End update traffic limiting config"..uri_list[1])
 end
 
---[[
-       为uri创建limit_req
---]]
-local function new_limit_req(uri)
-    -- 限制uri的QPS为qps_limit并允许突发QPS为$burst，即如果qps_limit < QPS < qps_limit + burst，则delay处理，如果QPS > $qps_limit + $burst，则直接拒绝请求
-    local qps_limit = uri_limit_map:get(uri)
-    if qps_limit == nil then
-        return nil
-    end
-    local burst = uri_limit_map:get(uri) * 0.1
-    local result, err = limit_req.new("qps_limit_store", qps_limit, burst)
-    if not result then
-        logger:err("failed to instantiate a resty.limit.req object: " .. err .. ", uri: " .. uri)
-        return nil
-    end
-    return result
-end
 
 --[[
        核心函数，对uri实行限流
 --]]
 function _M.on_filter(self)
     local uri = ngx.var.uri
-    local limit_req = new_limit_req(uri)
-    if (limit_req == nil) then
+    if uri_list[uri] == nil then
         return
     end
 
-    local delay, err = limit_req:incoming(uri, true)
+    local delay, err = limit_traffic:combine(limiter_list, uri_list, states)
     if not delay then
         if err == "rejected" then
             -- where the throttling goes
             return ngx.exit(503)
         end
-        logger:err("failed to limit req: " .. err)
+        logger:err("failed to limit traffic: " .. err.." uri: ".. uri)
         return ngx.exit(500)
     end
 
