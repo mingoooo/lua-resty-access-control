@@ -44,7 +44,7 @@ function _M.fetch_data(self, mod_redis_key_prefix, cache_file)
         return self.load_file(cache_file)
     end
 
-    local redis_full_key_prefix = cfg.redis_common_key_prefix..":" .. mod_redis_key_prefix .. ":"
+    local redis_full_key_prefix = cfg.common_redis_key_prefix..":" .. mod_redis_key_prefix .. ":"
 
     -- 先获取mod所有key
     cursor = 0
@@ -76,7 +76,8 @@ function _M.fetch_data(self, mod_redis_key_prefix, cache_file)
 
     -- 合并数据并剥掉key的前缀
     for i, key in ipairs(keys) do
-        data[string.sub(key, #redis_full_key_prefix + 1)] = vals[i]
+        local real_key = string.sub(key, #redis_full_key_prefix + 1)
+        data[real_key] = vals[i]
     end
 
     -- 备份到缓存文件
