@@ -1,6 +1,6 @@
-# lua-resty-blacklist
+# lua-resty-access-control
 
-Openresty + Redis 黑名单，多个 Openresty 读取同一个 Reids，实现共享黑名单。
+Openresty 访问控制 ，利用 Redis 实现多个入口集中管理
 
 - 支持设置有效期
 - 支持服务降级
@@ -9,14 +9,14 @@ Openresty + Redis 黑名单，多个 Openresty 读取同一个 Reids，实现共
 
 # 目录
 
-- [lua-resty-blacklist](#lua-resty-blacklist)
+- [lua-resty-access-control](#lua-resty-access-control)
 - [目录](#%E7%9B%AE%E5%BD%95)
 - [工作原理](#%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86)
 - [必要条件](#%E5%BF%85%E8%A6%81%E6%9D%A1%E4%BB%B6)
 - [快速开始](#%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B)
-    - [1. 上传 lua 脚本](#1-%E4%B8%8A%E4%BC%A0-lua-%E8%84%9A%E6%9C%AC)
-    - [2. 分配 nginx 本地缓存黑名单、设置同步黑名单任务](#2-%E5%88%86%E9%85%8D-nginx-%E6%9C%AC%E5%9C%B0%E7%BC%93%E5%AD%98%E9%BB%91%E5%90%8D%E5%8D%95%E8%AE%BE%E7%BD%AE%E5%90%8C%E6%AD%A5%E9%BB%91%E5%90%8D%E5%8D%95%E4%BB%BB%E5%8A%A1)
-    - [3. 修改同步黑名单配置](#3-%E4%BF%AE%E6%94%B9%E5%90%8C%E6%AD%A5%E9%BB%91%E5%90%8D%E5%8D%95%E9%85%8D%E7%BD%AE)
+    - [1. 上传 lua 程序](#1-%E4%B8%8A%E4%BC%A0-lua-%E7%A8%8B%E5%BA%8F)
+    - [2. 分配 nginx 本地缓存黑名单、设置同步任务](#2-%E5%88%86%E9%85%8D-nginx-%E6%9C%AC%E5%9C%B0%E7%BC%93%E5%AD%98%E9%BB%91%E5%90%8D%E5%8D%95%E8%AE%BE%E7%BD%AE%E5%90%8C%E6%AD%A5%E4%BB%BB%E5%8A%A1)
+    - [3. 修改同步 Redis 配置](#3-%E4%BF%AE%E6%94%B9%E5%90%8C%E6%AD%A5-redis-%E9%85%8D%E7%BD%AE)
     - [4. 添加限制配置](#4-%E6%B7%BB%E5%8A%A0%E9%99%90%E5%88%B6%E9%85%8D%E7%BD%AE)
     - [5. reload nginx](#5-reload-nginx)
     - [6. 测试](#6-%E6%B5%8B%E8%AF%95)
@@ -34,7 +34,7 @@ Openresty + Redis 黑名单，多个 Openresty 读取同一个 Reids，实现共
 
 # 工作原理
 
-![ip_blacklist](/docs/pic/ip_blacklist.png)
+![ip_blacklist](docs/pic/ip_blacklist.png)
 
 # 必要条件
 
@@ -43,11 +43,11 @@ Openresty + Redis 黑名单，多个 Openresty 读取同一个 Reids，实现共
 
 # 快速开始
 
-## 1. 上传 lua 脚本
+## 1. 上传 lua 程序
 
-本例上传到/data/svr/openresty/lualib/ip_blacklist
+本例上传到/data/svr/openresty/lualib/access_control
 
-## 2. 分配 nginx 本地缓存黑名单、设置同步黑名单任务
+## 2. 分配 nginx 本地缓存黑名单、设置同步任务
 
 修改 nginx.conf，在 http 配置块下，第一个 server 前添加：
 
@@ -59,37 +59,24 @@ http
     lua_shared_dict ip_blacklist 10m;
 
     # 在初始化 nginx worker 时开启同步定时任务
-    init_worker_by_lua_file /data/svr/openresty/lualib/ip_blacklist/sync.lua;
+    init_worker_by_lua_file /data/svr/openresty/lualib/access_control/sync.lua;
 ...
 ```
 
-## 3. 修改同步黑名单配置
+## 3. 修改同步 Redis 配置
 
 ```
-vim /data/svr/openresty/lualib/ip_blacklist/config.lua
+vim openresty/lualib/access_control/mods/ip_blacklist/config.lua
 ```
 
 ```
+...
 -- redis ip
-redis_host = "127.0.0.1"
+_M.redis_host = "127.0.0.1"
 
 -- redis port
-redis_port = 6379
-
--- redis连接超时时间
-redis_connection_timeout = 100
-
--- redis存储黑名单的set key
-redis_key_prefix = "blacklist"
-
--- 同步黑名单时间间隔（单位：秒）
-sync_interval = 60
-
--- 黑名单缓存文件路径
-cache_file = "/tmp/ip_blacklist"
-
--- 黑名单过期时间缓存文件路径
-expireat_cache_file = "/tmp/ip_blacklist_expireat"
+_M.redis_port = 6379
+...
 ```
 
 ## 4. 添加限制配置
@@ -97,13 +84,13 @@ expireat_cache_file = "/tmp/ip_blacklist_expireat"
 在需要限制的 http、server 或 location 块下添加以下配置
 
 ```
-vim /data/conf/openresty/vhosts/abc.com
+vim nginx.conf
 ```
 
 ```
 ...
-location / {
-    access_by_lua_file /data/svr/openresty/lualib/ip_blacklist.lua;
+http {
+    access_by_lua_file /data/svr/openresty/lualib/access_control/access_filter.lua;
 ...
 ```
 
@@ -126,10 +113,10 @@ curl -I http://127.0.0.1
 
 ```
 # 添加IP 127.0.0.1到黑名单，无过期
-redis-cli set ip_blacklist_127.0.0.1 0
+redis-cli set access_control:ip_blacklist:127.0.0.1 0
 
-# 添加IP 127.0.0.2到黑名单，60秒有效期
-redis-cli set blacklist_127.0.0.2 $((`date +%s` + 60)) EX 60
+# 添加IP 127.0.0.2到黑名单，60秒有效期。注意：这里写入value是60秒后的时间戳
+redis-cli set access_control:blacklist:127.0.0.2 $((`date +%s` + 60)) EX 60
 ```
 
 ### 6.3 测试添加黑名单后
@@ -148,7 +135,7 @@ curl -I http://127.0.0.1
 修改 nginx 配置文件，新增 server 块
 
 ```
-vim /data/conf/openresty/nginx.conf
+vim openresty/nginx.conf
 ```
 
 ```
@@ -156,7 +143,7 @@ server {
     listen     4001;
     location /api/blacklist {
         default_type application/json;
-        content_by_lua_file /data/svr/openresty/lualib/ip_blacklist/api.lua;
+        content_by_lua_file /data/svr/openresty/lualib/access_control/mods/ip_blacklist/api.lua;
     }
 }
 ```
