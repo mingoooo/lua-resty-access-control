@@ -4,7 +4,7 @@ local _M = {}
 _M.mods = {"ip_blacklist", "traffic_control"}
 
 -- 同步黑名单时间间隔（单位：秒）
-_M.sync_interval = 60
+_M.sync_interval = 10
 
 -- redis ip
 _M.redis_host = "127.0.0.1"
@@ -14,5 +14,9 @@ _M.redis_port = 6379
 
 -- redis连接超时时间
 _M.redis_connect_timeout = 100
+
+_M.redis_common_key_prefix="ngx:access_control"
+
+_M.cache_file_basepath="/tmp/"
 
 return _M

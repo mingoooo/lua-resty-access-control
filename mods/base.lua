@@ -30,9 +30,9 @@ function _M.keepalive_redis(self)
     return self.redis:set_keepalive(cfg.sync_interval * 2 or 60 * 2, 100)
 end
 
--- 从redis拉取数据，连不上就从缓存文件加载
-function _M.fetch_data(self, redis_key_prefix, cache_file)
-    ngx.log(ngx.DEBUG, "Fetch " .. redis_key_prefix .. " data")
+-- 从redis拉取数据，只要获取失败就从缓存文件加载
+function _M.fetch_data(self, mod_redis_key_prefix, cache_file)
+    ngx.log(ngx.DEBUG, "Fetch " .. mod_redis_key_prefix .. " data")
     local data = {}
     local keys = {}
     local vals = {}
@@ -44,10 +44,12 @@ function _M.fetch_data(self, redis_key_prefix, cache_file)
         return self.load_file(cache_file)
     end
 
-    -- 获取新黑名单到nginx缓存
+    local redis_full_key_prefix = cfg.redis_common_key_prefix..":" .. mod_redis_key_prefix .. ":"
+
+    -- 先获取mod所有key
     cursor = 0
     while true do
-        local res, err = self.redis:scan(cursor, "MATCH", "access_control:" .. redis_key_prefix .. ":*", "COUNT", 1000)
+        local res, err = self.redis:scan(cursor, "MATCH", redis_full_key_prefix .. "*", "COUNT", 1000)
         if err then
             ngx.log(ngx.ERR, "Redis read error while retrieving keys: " .. err)
             return self.load_file(cache_file)
@@ -63,7 +65,7 @@ function _M.fetch_data(self, redis_key_prefix, cache_file)
         end
     end
 
-    -- 获取有效期
+    -- 再获取key的value
     if keys[1] ~= nil then
         vals, err = self.redis:mget(unpack(keys))
         if err then
@@ -72,9 +74,9 @@ function _M.fetch_data(self, redis_key_prefix, cache_file)
         end
     end
 
-    -- 合并数据
+    -- 合并数据并剥掉key的前缀
     for i, key in ipairs(keys) do
-        data[key] = vals[i]
+        data[string.sub(key, #redis_full_key_prefix + 1)] = vals[i]
     end
 
     -- 备份到缓存文件
@@ -85,9 +87,14 @@ function _M.fetch_data(self, redis_key_prefix, cache_file)
     return data
 end
 
+-- 从本地缓存文件中获取数据
 function _M.load_file(path)
     ngx.log(ngx.DEBUG, "Load data by file: " .. path)
     local file = io.open(path, "r")
+    if file == nil then
+        ngx.log(ngx.WARN, "Unable to read file "..path)
+        return nil
+    end
     local res = cjson.decode(file:read())
     file:close()
     return res

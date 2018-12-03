@@ -1,24 +1,39 @@
 --[[
        使用openresty实现基于uri的限流功能
        author: frank chen
-       
 --]]
+
 local limit_req = require "resty.limit.req"
 local base = require "access_control.mods.base"
-
+local common_cfg = require "access_control.config"
 
 local uri_limit_map = ngx.shared["uri_limit_map"]
+local redis_key_prefix = "traffic_limit"
+local cache_file_path = common_cfg.cache_file_basepath.."traffic_limit_setting.json"
 
 local _M = {}
 setmetatable(_M, {__index = base})
 
+local function log(level, msg)
+    ngx.log(level, "[TXCTRL] ", msg)
+end
+
 local function logInfo(msg)
-    ngx.log(ngx.INFO, "[TXCTRL] ", msg)
+    log(ngx.INFO, msg)
 end
 
 local function logError(msg)
-    ngx.log(ngx.ERR, "[TXCTRL] ", msg)
+    log(ngx.ERR, msg)
 end
+
+local function logWarn(msg)
+    log(ngx.WARN, msg)
+end
+
+local function logDebug(msg)
+    log(ngx.DEBUG, msg)
+end
+
 
 --[[
        redis同步配置回调
@@ -27,16 +42,21 @@ function _M.sync(self)
     logInfo("Begin update traffic limiting config")
 
     -- 从redis或缓存文件读取数据
-    local config_list = self:fetch_data("traffic_limit", "/tmp/traffic_limit_setting.json")
+    local config_list = self:fetch_data(redis_key_prefix, cache_file_path)
+
 
     -- 更新共享内存
     if config_list ~= nil then
+        uri_limit_map:flush_all()
         for k, v in pairs(config_list) do
-            if (type(v) == "number") then
-                uri_limit_map:set(k, v)
-            end
+            local limit = tonumber(v)
+            if limit == nil then
+                logWarn("non-number value "..v.." for key "..k)
+            else
+                uri_limit_map:set(k, limit)
+            end 
         end
-    do
+    end
 
     logInfo("End update traffic limiting config")
 end
