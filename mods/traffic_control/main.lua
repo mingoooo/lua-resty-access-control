@@ -42,12 +42,12 @@ function _M.on_sync(self)
     -- 从redis或缓存文件读取数据
     local config_list = self:fetch_data(redis_key_prefix, cache_file_path)
 
-
     -- 更新共享内存
-    if config_list == nil then
-        logWarn("no config data from either redis or cache file")
+    if config_list == nil or next(config_list) == nil then
+        logWarn("NO CONFIG DATA FOUND FROM REDIS OR CACHE FILE")
         return
     end
+
     uri_limit_map:flush_all()
     for k, v in pairs(config_list) do
         local limit = tonumber(v)
@@ -57,7 +57,6 @@ function _M.on_sync(self)
             uri_limit_map:set(k, limit)
         end
     end
-    
 
     logInfo("End update traffic limiting config")
 end
@@ -102,7 +101,7 @@ function _M.on_filter(self)
 
     if delay >= 0.001 then
         -- 当 $qps_limit < QPS < qps_limit + $burst时, 为了保持QPS == $qps_limit，这里delay一段时间
-        logInfo("delay it here a bit to conform to the connection limit, time: " .. delay)
+        logDebug("delay it here a bit to conform to the connection limit, time: " .. delay)
         ngx.sleep(delay)
     end
 end
