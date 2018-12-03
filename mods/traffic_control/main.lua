@@ -24,7 +24,7 @@ setmetatable(_M, {__index = base})
        redis同步配置回调
 --]]
 function _M.on_sync(self)
-    logger:info("Begin update traffic limiting config")
+    logger:info("updating traffic limiting config")
 
     -- 从redis或缓存文件读取数据
     local config_list = self:fetch_data(redis_key_prefix, cache_file_path)
@@ -44,8 +44,6 @@ function _M.on_sync(self)
             uri_limit_map:set(k, limit)
         end
     end
-
-    logger:info("End update traffic limiting config")
 end
 
 --[[
