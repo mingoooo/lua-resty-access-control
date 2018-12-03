@@ -4,11 +4,11 @@ local cfg = require "access_control.config"
 
 local _M = {}
 
-function _M.sync(self)
+function _M.on_sync(self)
     ngx.log(ngx.WARN, "Undefined sync method")
 end
 
-function _M.filter(self)
+function _M.on_filter(self)
     ngx.log(ngx.WARN, "Undefined filter method")
 end
 

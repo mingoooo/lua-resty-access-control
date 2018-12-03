@@ -33,11 +33,11 @@ setmetatable(_M, {__index = base})
 Example:
 
 ```
-function _M.sync(self)
+function _M.on_sync(self)
     print("I am sync function")
 end
 
-function _M.filter(self)
+function _M.on_filter(self)
     print("I am filter function")
 end
 ```

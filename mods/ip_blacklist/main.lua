@@ -40,7 +40,7 @@ function _M.sync_shared_dict(dict_name, data)
     end
 end
 
-function _M.sync(self)
+function _M.on_sync(self)
     ngx.log(ngx.DEBUG, "Begin of update blacklist")
     local new_ip_blacklist
 
@@ -53,7 +53,7 @@ function _M.sync(self)
     ngx.log(ngx.DEBUG, "End of update blacklist")
 end
 
-function _M.filter(self)
+function _M.on_filter(self)
     local ip = self.get_user_ip()
     ngx.log(ngx.DEBUG, "User IP: " .. ip)
     local ip_blacklist = ngx.shared[cfg.dict_name]
