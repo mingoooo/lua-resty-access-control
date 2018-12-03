@@ -113,10 +113,10 @@ curl -I http://127.0.0.1
 
 ```
 # 添加IP 127.0.0.1到黑名单，无过期
-redis-cli set access_control:ip_blacklist:127.0.0.1 0
+redis-cli set ngx:access_control:ip_blacklist:127.0.0.1 0
 
 # 添加IP 127.0.0.2到黑名单，60秒有效期。注意：这里写入value是60秒后的时间戳
-redis-cli set access_control:blacklist:127.0.0.2 $((`date +%s` + 60)) EX 60
+redis-cli set ngx:access_control:ip_blacklist:127.0.0.2 $((`date +%s` + 60)) EX 60
 ```
 
 ### 6.3 测试添加黑名单后
