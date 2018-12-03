@@ -104,7 +104,7 @@ function _M.load_file(path)
 end
 
 function _M.dump_file(path, table)
-    logger.debug("Dump data into file: " .. path)
+    logger:debug("Dump data into file: " .. path)
     local file = io.open(path, "w+")
     file:write(cjson.encode(table))
     file:close()
