@@ -42,18 +42,22 @@ function _M.on_sync(self)
     -- 从redis或缓存文件读取数据
     local config_list = self:fetch_data(redis_key_prefix, cache_file_path)
 
+
     -- 更新共享内存
-    if config_list ~= nil then
-        uri_limit_map:flush_all()
-        for k, v in pairs(config_list) do
-            local limit = tonumber(v)
-            if limit == nil then
-                logWarn("non-number value " .. v .. " for key " .. k)
-            else
-                uri_limit_map:set(k, limit)
-            end
+    if config_list == nil then
+        logWarn("no config data from either redis or cache file")
+        return
+    end
+    uri_limit_map:flush_all()
+    for k, v in pairs(config_list) do
+        local limit = tonumber(v)
+        if limit == nil then
+            logWarn("non-number value " .. v .. " for key " .. k)
+        else
+            uri_limit_map:set(k, limit)
         end
     end
+    
 
     logInfo("End update traffic limiting config")
 end
