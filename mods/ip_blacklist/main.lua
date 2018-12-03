@@ -7,6 +7,8 @@ logger.mod_name = "ip_blacklist"
 local _M = {}
 setmetatable(_M, {__index = base})
 
+local mod_redis_key_prefix = "ip_blacklist"
+
 -- 覆盖shared.dict
 function _M.sync_shared_dict(dict_name, data)
     local dict = ngx.shared[dict_name]
@@ -47,7 +49,7 @@ function _M.on_sync(self)
     local new_ip_blacklist
 
     -- 从redis或缓存文件读取数据
-    new_ip_blacklist = self:fetch_data(cfg.redis_key_prefix, gcfg.cache_file_basepath .. cfg.cache_file)
+    new_ip_blacklist = self:fetch_data(mod_redis_key_prefix, gcfg.cache_file_basepath .. cfg.cache_file)
 
     -- 同步共享内存字典
     self.sync_shared_dict(cfg.dict_name, new_ip_blacklist)
