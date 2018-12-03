@@ -1,5 +1,6 @@
 local base = require "access_control.mods.base"
 local cfg = require "access_control.mods.ip_blacklist.config"
+local gcfg = require "access_control.config"
 
 local _M = {}
 setmetatable(_M, {__index = base})
@@ -8,18 +9,21 @@ setmetatable(_M, {__index = base})
 function _M.sync_shared_dict(dict_name, data)
     local dict = ngx.shared[dict_name]
 
+    if type(data) ~= "table" then
+        ngx.log(ngx.ERR, "Data must table type")
+        return
+    end
+
     -- 清空dict
     -- TODO: 是否能一次覆盖所有
     ngx.log(ngx.DEBUG, "Flush blacklist")
     dict:flush_all()
 
     -- 写入
-    for k, ext in pairs(data) do
+    for key, ext in pairs(data) do
         if not ext then
             ngx.log(ngx.WARN, "No value in the key: " .. k)
         else
-            local _, _, key = string.match(k, "(.*):(.*):(.*)")
-
             if ext == "0" then
                 ngx.log(ngx.DEBUG, "Set for " .. dict_name .. " key: " .. key .. ", expire: 0")
                 dict:set(key, 1)
@@ -41,7 +45,7 @@ function _M.sync(self)
     local new_ip_blacklist
 
     -- 从redis或缓存文件读取数据
-    new_ip_blacklist = self:fetch_data(cfg.redis_key_prefix, cfg.cache_file)
+    new_ip_blacklist = self:fetch_data(cfg.redis_key_prefix, gcfg.cache_file_basepath .. cfg.cache_file)
 
     -- 同步共享内存字典
     self.sync_shared_dict(cfg.dict_name, new_ip_blacklist)
