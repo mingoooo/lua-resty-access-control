@@ -15,7 +15,7 @@ _M.redis_port = 6379
 -- redis连接超时时间
 _M.redis_connect_timeout = 100
 
-_M.redis_common_key_prefix="ngx:access_control"
+_M.common_redis_key_prefix="ngx:access_control"
 
 _M.cache_file_basepath="/tmp/"
 
