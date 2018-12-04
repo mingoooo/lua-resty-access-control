@@ -8,6 +8,7 @@
        author: frank chen
 --]]
 local limit_req = require "resty.limit.req"
+local resty_cjson = require "cjson"
 local base = require "access_control.mods.base"
 local common_cfg = require "access_control.config"
 local logger_mod = require "access_control.utils.logger"
@@ -37,9 +38,14 @@ function _M.on_sync(self)
 
     uri_limit_map:flush_all()
     for k, v in pairs(config_list) do
-        local limit = tonumber(v)
+        local setting = resty_cjson.decode(v) 
+        if setting == nil then
+            logWarn("Invalid json format, "..v)
+            return
+        end
+        local limit = tonumber(setting["qps_limit"])
         if limit == nil then
-            logger:warn("non-number value " .. v .. " for key " .. k)
+            logger:warn("no qps_limit configured " .. v .. " for key " .. k)
         else
             uri_limit_map:set(k, limit)
         end
@@ -52,7 +58,7 @@ end
 local function new_limit_req(uri)
     -- 限制uri的QPS为qps_limit并允许突发QPS为$burst，即如果qps_limit < QPS < qps_limit + burst，则delay处理，如果QPS > $qps_limit + $burst，则直接拒绝请求
     local qps_limit = uri_limit_map:get(uri)
-    if qps_limit == nil then
+    if qps_limit == nil or qps_limit < 0 then
         return nil
     end
     local burst = uri_limit_map:get(uri) * 0.1
@@ -68,13 +74,13 @@ end
        核心函数，对uri实行限流
 --]]
 function _M.on_filter(self)
-    local uri = ngx.var.uri
-    local limit_req = new_limit_req(uri)
+    local domain_uri = ngx.var.host..ngx.var.uri
+    local limit_req = new_limit_req(domain_uri)
     if (limit_req == nil) then
         return
     end
 
-    local delay, err = limit_req:incoming(uri, true)
+    local delay, err = limit_req:incoming(domain_uri, true)
     if not delay then
         if err == "rejected" then
             -- where the throttling goes
