@@ -19,4 +19,6 @@ _M.common_redis_key_prefix = "ngx:access_control"
 
 _M.cache_file_basepath = "/tmp/"
 
+_M.api_whitelist = {ip_blacklist = 1, traffic_limit = 1}
+
 return _M
