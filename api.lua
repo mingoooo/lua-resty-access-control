@@ -280,8 +280,11 @@ end
 
 function _M.delete(self)
     local resp = {}
-    local args = ngx.req.get_uri_args()
-    local keys = args["key"]
+    local data = self.req_body()
+    if not data then
+        return
+    end
+    local keys = data["keys"]
     if keys == nil then
         local reason = "Missing argument 'key'"
         self:say_err(ngx.HTTP_BAD_REQUEST, reason)
@@ -295,7 +298,7 @@ function _M.delete(self)
         return
     end
 
-    for key in keys:gmatch("[^,]+") do
+    for _, key in ipairs(keys) do
         local full_key = self.full_key(self.mod, key)
 
         -- Delete key
