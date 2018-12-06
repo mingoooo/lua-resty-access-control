@@ -55,7 +55,7 @@ function _M.req_body()
     local body = ngx.req.get_body_data()
     logger:debug("Request body: " .. body)
     local ok, data = pcall(cjson.decode, body)
-    if not ok then
+    if not ok or type(data) ~= "table" then
         local reason = "Json decode err, please check your request body is array"
         self:say_err(ngx.HTTP_BAD_REQUEST, reason)
         return nil
