@@ -28,26 +28,26 @@ function _M.on_sync(self)
     logger:info("updating traffic limiting config")
 
     -- 从redis或缓存文件读取数据
-    local config_list = self:fetch_data(redis_key_prefix, cache_file_path)
+    local settings = self:fetch_data(redis_key_prefix, cache_file_path)
 
     -- 更新共享内存
-    if config_list == nil or next(config_list) == nil then
+    if settings == nil or next(settings) == nil then
         logger:warn("NO CONFIG DATA FOUND FROM REDIS OR CACHE FILE")
         return
     end
 
     uri_limit_map:flush_all()
-    for k, v in pairs(config_list) do
-        local setting = resty_cjson.decode(v) 
-        if setting == nil then
-            logWarn("Invalid json format, "..v)
-            return
-        end
-        local limit = tonumber(setting["qps_limit"])
-        if limit == nil then
-            logger:warn("no qps_limit configured " .. v .. " for key " .. k)
-        else
-            uri_limit_map:set(k, limit)
+    -- 示例: 
+    -- k: 10.10.50.159\/limit1
+    -- v: {"qps_limit":150,"name":"测试服务1","app":"test-mod1","update_time":"2018-12-06 09:27:33","contact":"tester"}
+    for k, v in pairs(settings) do
+        if v ~= nil then
+            local limit = tonumber(v["qps_limit"])
+            if limit == nil then
+                logger:warn("no qps_limit configured " .. v .. " for key " .. k)
+            else
+                uri_limit_map:set(k, limit)
+            end
         end
     end
 end
