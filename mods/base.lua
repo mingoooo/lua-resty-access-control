@@ -79,7 +79,13 @@ function _M.fetch_data(self, mod_redis_key_prefix, cache_file)
     -- 合并数据并剥掉key的前缀
     for i, key in ipairs(keys) do
         local real_key = string.sub(key, #redis_full_key_prefix + 1)
-        data[real_key] = vals[i]
+        local ok, val = pcall(cjson.decode, vals[i])
+        if ok and type(val) == "table" then
+            data[real_key] = val
+        else
+            logger:err("Invalid json, key: " .. real_key)
+            data[real_key] = nil
+        end
     end
 
     -- 备份到缓存文件
