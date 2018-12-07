@@ -15,10 +15,13 @@ _M.redis_port = 6379
 -- redis连接超时时间
 _M.redis_connect_timeout = 100
 
+-- redis公共key前缀
 _M.common_redis_key_prefix = "ngx:access_control"
 
+-- 缓存文件目录
 _M.cache_file_basepath = "/tmp/"
 
+-- API白名单字典(key为模块自己的redis key前缀)
 _M.api_whitelist = {ip_blacklist = 1, traffic_limit = 1}
 
 return _M

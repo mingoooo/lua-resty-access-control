@@ -4,7 +4,7 @@ Openresty 访问控制 ，利用 Redis 实现多个入口集中管理
 
 - 支持设置有效期
 - 支持服务降级
-- Restful API
+- API
 - WEB 界面（待整理）
 
 # 目录
@@ -23,13 +23,8 @@ Openresty 访问控制 ，利用 Redis 实现多个入口集中管理
         - [6.1 确认添加黑名单前正常访问](#61-%E7%A1%AE%E8%AE%A4%E6%B7%BB%E5%8A%A0%E9%BB%91%E5%90%8D%E5%8D%95%E5%89%8D%E6%AD%A3%E5%B8%B8%E8%AE%BF%E9%97%AE)
         - [6.2 添加 ip 到黑名单](#62-%E6%B7%BB%E5%8A%A0-ip-%E5%88%B0%E9%BB%91%E5%90%8D%E5%8D%95)
         - [6.3 测试添加黑名单后](#63-%E6%B5%8B%E8%AF%95%E6%B7%BB%E5%8A%A0%E9%BB%91%E5%90%8D%E5%8D%95%E5%90%8E)
-- [API](#api)
-    - [部署 API](#%E9%83%A8%E7%BD%B2-api)
-    - [GET](#get)
-    - [POST](#post)
-    - [PUT](#put)
-    - [DELETE](#delete)
-    - [详细接口文档（待整理)](#%E8%AF%A6%E7%BB%86%E6%8E%A5%E5%8F%A3%E6%96%87%E6%A1%A3%E5%BE%85%E6%95%B4%E7%90%86)
+        - [6.4 从黑名单删除 key](#64-%E4%BB%8E%E9%BB%91%E5%90%8D%E5%8D%95%E5%88%A0%E9%99%A4-key)
+- [API 文档（待整理)](#api-%E6%96%87%E6%A1%A3%E5%BE%85%E6%95%B4%E7%90%86)
 - [WEB (待整理)](#web-%E5%BE%85%E6%95%B4%E7%90%86)
 
 # 工作原理
@@ -66,7 +61,7 @@ http
 ## 3. 修改同步 Redis 配置
 
 ```
-vim openresty/lualib/access_control/mods/ip_blacklist/config.lua
+vim openresty/lualib/access_control/config.lua
 ```
 
 ```
@@ -113,10 +108,10 @@ curl -I http://127.0.0.1
 
 ```
 # 添加IP 127.0.0.1到黑名单，无过期
-redis-cli set ngx:access_control:ip_blacklist:127.0.0.1 0
+redis-cli set ngx:access_control:ip_blacklist:127.0.0.1 {\"expireat\":0}
 
 # 添加IP 127.0.0.2到黑名单，60秒有效期。注意：这里写入value是60秒后的时间戳
-redis-cli set ngx:access_control:ip_blacklist:127.0.0.2 $((`date +%s` + 60)) EX 60
+redis-cli set ngx:access_control:ip_blacklist:127.0.0.2 {\"expireat\":$((`date +%s` + 60))} EX 60
 ```
 
 ### 6.3 测试添加黑名单后
@@ -128,70 +123,15 @@ curl -I http://127.0.0.1
 # HTTP/1.1 403 Forbidden
 ```
 
-# API
-
-## 部署 API
-
-修改 nginx 配置文件，新增 server 块
+### 6.4 从黑名单删除 key
 
 ```
-vim openresty/nginx.conf
+# 从黑名单删除IP 127.0.0.1
+redis-cli del ngx:access_control:ip_blacklist:127.0.0.1
 ```
 
-```
-server {
-    listen     4001;
-    location /api/blacklist {
-        default_type application/json;
-        content_by_lua_file /data/svr/openresty/lualib/access_control/mods/ip_blacklist/api.lua;
-    }
-}
-```
+# API 文档（待整理)
 
-```
-/data/sh/openresty.sh reload
-```
-
-## GET
-
-获取黑名单（目前不支持任何参数传递）
-
-```
-curl http://127.0.0.1:4001/api/blacklist
-
-# {"data":[{"key":"blacklist_127.0.0.1","ip":"127.0.0.1","expireat":0}],"reason":""}
-```
-
-## POST
-
-添加 IP 到黑名单
-
-```
-curl -X POST -d '[{"ip": "1.1.1.1", "expire": 60}]' http://127.0.0.1:4001/api/blacklist
-
-# {"data":[{"key":"blacklist_1.1.1.1","result":"OK","ip":"1.1.1.1","expireat":1543386920}],"reason":""}
-```
-
-## PUT
-
-更新黑名单 IP
-
-```
-curl -X PUT -d '[{"ip": "1.1.1.1", "expire": 120}]' http://127.0.0.1:4001/api/blacklist
-
-# {"data":[{"key":"blacklist_1.1.1.1","result":"OK","ip":"1.1.1.1","expireat":1543387100}],"reason":""}
-```
-
-## DELETE
-
-从黑名单中删除 IP
-
-```
-curl -X DELETE http://127.0.0.1:4001/api/blacklist?ip=1.1.1.1,127.0.0.1
-
-# {"data":[{"result":1,"ip":"1.1.1.1","key":"blacklist_1.1.1.1"},{"result":0,"ip":"127.0.0.1","key":"blacklist_127.0.0.1"}],"reason":""}
-```
-
-## 详细接口文档（待整理)
+[API 文档](docs/api.md)
 
 # WEB (待整理)

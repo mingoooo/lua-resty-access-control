@@ -1,3 +1,9 @@
+--[[
+Openresty IP Blacklist
+Return 403(FORBIDDEN) if client IP in the blacklist
+
+redis key prefix: ip_blacklist
+--]]
 local base = require "access_control.mods.base"
 local cfg = require "access_control.mods.ip_blacklist.config"
 local gcfg = require "access_control.config"
