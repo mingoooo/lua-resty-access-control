@@ -7,6 +7,7 @@ redis key prefix: ip_blacklist
 local base = require "access_control.mods.base"
 local cfg = require "access_control.mods.ip_blacklist.config"
 local gcfg = require "access_control.config"
+local iputils = require "access_control.utils.iputils"
 local logger_mod = require "access_control.utils.logger"
 local logger = logger_mod:new("ip_blacklist")
 
@@ -15,8 +16,21 @@ setmetatable(_M, {__index = base})
 
 local mod_redis_key_prefix = "ip_blacklist"
 
+function _M.set_ip(dict, ip, expireat)
+    if expireat == 0 then
+        dict:set(ip, 1)
+    else
+        local ex = expireat - math.floor(ngx.now())
+        if ex <= 0 then
+            logger:warn("The ip expired: " .. ip)
+        else
+            dict:set(ip, 1, ex)
+        end
+    end
+end
+
 -- 覆盖shared.dict
-function _M.sync_shared_dict(dict_name, data)
+function _M.sync_shared_dict(self, dict_name, data)
     local dict = ngx.shared[dict_name]
 
     if type(data) ~= "table" then
@@ -34,14 +48,14 @@ function _M.sync_shared_dict(dict_name, data)
             logger:warn("No value in the key: " .. key)
         else
             local ext = val.expireat
-            if ext == 0 then
-                dict:set(key, 1)
+            if not key:find("/") then
+                -- ip addr
+                self.set_ip(dict, key, ext)
             else
-                local ex = ext - math.floor(ngx.now())
-                if ex <= 0 then
-                    logger:warn("The key expired: " .. key)
-                else
-                    dict:set(key, 1, ex)
+                -- cidr
+                local ip_list = iputils.cidr2ips(key)
+                for _, ip in ipairs(ip_list) do
+                    self.set_ip(dict, ip, ext)
                 end
             end
         end
@@ -55,7 +69,7 @@ function _M.on_sync(self)
     new_ip_blacklist = self:fetch_data(mod_redis_key_prefix, gcfg.cache_file_basepath .. cfg.cache_file)
 
     -- 同步共享内存字典
-    self.sync_shared_dict(cfg.dict_name, new_ip_blacklist)
+    self:sync_shared_dict(cfg.dict_name, new_ip_blacklist)
 end
 
 function _M.on_filter(self)
